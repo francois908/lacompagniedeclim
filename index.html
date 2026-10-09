@@ -248,9 +248,12 @@ form{margin:0}
   }
   if(tic())var minuterie=setInterval(function(){if(!tic())clearInterval(minuterie)},calme?30000:1000);
 
-  /* Formulaire : envoi par FormSubmit, qui transmet chaque inscription par courriel à COURRIEL.
-     Pour changer de service, remplace SERVICE et, au besoin, la forme de « donnees ». */
+  /* Formulaire : chaque inscription part à deux endroits en même temps.
+     1. SERVICE (FormSubmit) la transmet par courriel à COURRIEL.
+     2. FEUILLE (script Google Apps Script) l'ajoute comme ligne dans le Google Sheet des prospects.
+     Si FEUILLE est vide, seul le courriel est envoyé. */
   var SERVICE='https://formsubmit.co/ajax/'+COURRIEL;
+  var FEUILLE='https://script.google.com/macros/s/AKfycbwsYcnE5uqIWKc-354DdinzfGdxVahnEJBCIiRt6X0vYNQQ6n_oJ21QT8d6sRpm1N86/exec';
   var SUJET='Inscription — promo de lancement 2027';
   var form=document.getElementById('formulaire'),champs=document.getElementById('champs'),merci=document.getElementById('merci'),
       rate=document.getElementById('rate'),bouton=document.getElementById('envoyer'),libelle=document.getElementById('libelle'),
@@ -275,12 +278,18 @@ form{margin:0}
     message=['Bonjour,','',"Je souhaite être avisé(e) de la promo de lancement de La Compagnie de Clim.",'','Prénom : '+v('prenom'),'Nom : '+v('nom'),'Ville : '+v('ville'),'Courriel : '+v('courriel'),'Appareil souhaité : '+appareil,'','Merci!'].join('\n');
     if(v('miel')){reussite();return} /* champ piège rempli : un robot, on n'envoie rien */
     var donnees={'Prénom':v('prenom'),'Nom':v('nom'),'Ville':v('ville'),'email':v('courriel'),'Appareil souhaité':appareil,'_subject':SUJET,'_template':'table'};
+    var ligne={prenom:v('prenom'),nom:v('nom'),ville:v('ville'),courriel:v('courriel'),appareil:appareil,page:location.hostname};
     envoi=true;bouton.disabled=true;libelle.textContent='Envoi en cours…';rate.hidden=true;
-    var arret=window.AbortController?new AbortController():null;
+    var arret=window.AbortController?new AbortController():null,signal=arret?arret.signal:undefined;
     var delai=setTimeout(function(){if(arret)arret.abort()},15000);
-    fetch(SERVICE,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(donnees),signal:arret?arret.signal:undefined})
-      .then(function(r){return r.json().then(function(j){return r.ok&&String(j.success)==='true'})})
-      .then(function(ok){if(ok)reussite();else echec()},echec)
+    var non=function(){return false};
+    var parCourrielOk=fetch(SERVICE,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(donnees),signal:signal})
+      .then(function(r){return r.json().then(function(j){return r.ok&&String(j.success)==='true'})}).catch(non);
+    /* text/plain : évite la vérification préalable (preflight) que Google Apps Script ne gère pas */
+    var dansFeuilleOk=!FEUILLE?Promise.resolve(false):fetch(FEUILLE,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(ligne),signal:signal})
+      .then(function(r){return r.json()}).then(function(j){return !!j&&j.ok===true}).catch(non);
+    Promise.all([parCourrielOk,dansFeuilleOk])
+      .then(function(ok){if(ok[0]||ok[1])reussite();else echec()},echec)
       .then(function(){clearTimeout(delai);envoi=false;bouton.disabled=false;libelle.textContent='Je veux être avisé'});
   });
   copier.addEventListener('click',function(){
