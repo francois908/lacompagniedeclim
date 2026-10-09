@@ -86,12 +86,13 @@ form{margin:0}
 .rangee{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .champ{margin:0 0 20px;padding:0;border:0;min-width:0}
 .champ > label,.champ > legend{display:block;padding:0;margin-bottom:8px;font-weight:700;font-size:15px}
-.champ input[type=text],.champ input[type=email]{
+.champ input[type=text],.champ input[type=email],.champ input[type=tel]{
   display:block;width:100%;min-height:54px;padding:14px;
   border:2px solid var(--noir);border-radius:0;background:#fff;color:var(--noir);
   font:500 17px/1.3 var(--police);appearance:none;
 }
-.champ input[type=text]:focus,.champ input[type=email]:focus{outline:3px solid var(--orange);outline-offset:0;border-color:var(--orange)}
+.champ input[type=text]:focus,.champ input[type=email]:focus,.champ input[type=tel]:focus{outline:3px solid var(--orange);outline-offset:0;border-color:var(--orange)}
+.facultatif{font-weight:500;color:var(--encre-douce)}
 .choix{display:flex;flex-wrap:wrap;gap:8px}
 .choix label{position:relative;display:block}
 .choix input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
@@ -189,7 +190,10 @@ form{margin:0}
           <div class="champ"><label for="nom">Nom *</label><input id="nom" name="nom" type="text" autocomplete="family-name" required></div>
         </div>
         <div class="champ"><label for="ville">Ville *</label><input id="ville" name="ville" type="text" autocomplete="address-level2" required></div>
-        <div class="champ"><label for="courriel">Adresse courriel *</label><input id="courriel" name="courriel" type="email" autocomplete="email" inputmode="email" required></div>
+        <div class="rangee">
+          <div class="champ"><label for="courriel">Adresse courriel *</label><input id="courriel" name="courriel" type="email" autocomplete="email" inputmode="email" required></div>
+          <div class="champ"><label for="telephone">Téléphone <span class="facultatif">(facultatif)</span></label><input id="telephone" name="telephone" type="tel" autocomplete="tel" inputmode="tel" pattern="[0-9+\(\)\-. ]{10,20}" title="Un numéro à 10 chiffres, par exemple 514 555-0123"></div>
+        </div>
         <fieldset class="champ">
           <legend>Appareil souhaité *</legend>
           <div class="choix">
@@ -275,10 +279,10 @@ form{margin:0}
     e.preventDefault();
     if(envoi||!form.reportValidity())return;
     var appareil=form.querySelector('input[name=appareil]:checked').value;
-    message=['Bonjour,','',"Je souhaite être avisé(e) de la promo de lancement de La Compagnie de Clim.",'','Prénom : '+v('prenom'),'Nom : '+v('nom'),'Ville : '+v('ville'),'Courriel : '+v('courriel'),'Appareil souhaité : '+appareil,'','Merci!'].join('\n');
+    message=['Bonjour,','',"Je souhaite être avisé(e) de la promo de lancement de La Compagnie de Clim.",'','Prénom : '+v('prenom'),'Nom : '+v('nom'),'Ville : '+v('ville'),'Courriel : '+v('courriel'),'Téléphone : '+(v('telephone')||'non fourni'),'Appareil souhaité : '+appareil,'','Merci!'].join('\n');
     if(v('miel')){reussite();return} /* champ piège rempli : un robot, on n'envoie rien */
-    var donnees={'Prénom':v('prenom'),'Nom':v('nom'),'Ville':v('ville'),'email':v('courriel'),'Appareil souhaité':appareil,'_subject':SUJET,'_template':'table'};
-    var ligne={prenom:v('prenom'),nom:v('nom'),ville:v('ville'),courriel:v('courriel'),appareil:appareil,page:location.hostname};
+    var donnees={'Prénom':v('prenom'),'Nom':v('nom'),'Ville':v('ville'),'email':v('courriel'),'Téléphone':v('telephone')||'non fourni','Appareil souhaité':appareil,'_subject':SUJET,'_template':'table'};
+    var ligne={prenom:v('prenom'),nom:v('nom'),ville:v('ville'),courriel:v('courriel'),telephone:v('telephone'),appareil:appareil,page:location.hostname};
     envoi=true;bouton.disabled=true;libelle.textContent='Envoi en cours…';rate.hidden=true;
     var arret=window.AbortController?new AbortController():null,signal=arret?arret.signal:undefined;
     var delai=setTimeout(function(){if(arret)arret.abort()},15000);
